@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 # TODO: add sort by field
-# TODO: add status indicator
+# TODO: improve status indicator
 st.title("Nature Headline Aggregator", text_alignment="center")
 
 
@@ -42,8 +42,10 @@ for subject in subjects:
                         "URL": f"www.nature.com{x['href']}",
                     }
                     headlines.append(data)
-
-        time.sleep(10)
+        with st.spinner(
+            f"SCRAPING HEADLINES IN SUBJECT FIELD: {subject}", show_time=True
+        ):
+            time.sleep(5)
 
     elif r.status_code == 400:
         print(f"Error scraping {subject}, continuing to next subject")
