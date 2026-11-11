@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 # TODO: add sort by field
-# TODO: improve status indicator
+
 st.title("Nature Headline Aggregator", text_alignment="center")
 
 
@@ -19,41 +19,48 @@ subjects = [
     "computational-biology-and-bioinformatics",
 ]
 
-
 headlines = []
-for subject in subjects:
-    url = f"https://www.nature.com/subjects/{subject}"
-    r = requests.get(url)
-    if r.status_code == 200:
-        soup = BeautifulSoup(r.text, "html.parser")
-        title = soup.find_all("a", class_="u-link-inherit")
-        date = soup.find_all("time", class_="c-meta__item c-meta__item--block-at-lg")
-        type = soup.find_all("span", class_="c-meta__type")
 
-        print(f"SCRAPING HEADLINES IN SUBJECT FIELD: {subject}")
-        for x in title:
-            for y in date:
-                for z in type:
-                    data = {
-                        "Field": subject,
-                        "Date": y.text,
-                        "Type": z.text,
-                        "Headline": x.text,
-                        "URL": f"www.nature.com{x['href']}",
-                    }
-                    headlines.append(data)
-        with st.spinner(
-            f"SCRAPING HEADLINES IN SUBJECT FIELD: {subject}", show_time=True
-        ):
+@st.cache_data(show_spinner="Fetching fresh data...",ttl=86400)
+def headlinescrape():
+   
+    for subject in subjects:
+        url = f"https://www.nature.com/subjects/{subject}"
+        r = requests.get(url)
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.text, "html.parser")
+            articles = soup.find_all("article")
+            for article in articles:
+                title = article.find("a", class_="u-link-inherit")
+                date = article.find("time", class_="c-meta__item c-meta__item--block-at-lg")
+                articletype = article.find("span", class_="c-meta__type")
+                data = {
+                            "Field": subject,
+                            "Date": date.text,
+                            "Type": articletype.text,
+                            "Headline": title.text,
+                            "URL": f"www.nature.com{title['href']}",
+                        }
+                headlines.append(data)
+            print(subject)
             time.sleep(5)
 
-    elif r.status_code == 400:
-        print(f"Error scraping {subject}, continuing to next subject")
-        continue
-    else:
-        print(f"Exiting with status code {r.status_code} while scraping {subject}")
-        break
 
-df = pd.DataFrame(headlines)
-df = df.drop_duplicates("Headline")
-st.dataframe(df)
+        elif r.status_code in range(400,499):
+            print(f"Client side error code {r.status_code} while scraping {subject}, ensure appropriate URL and authorization. Continuing to next subject")
+            continue
+        else:
+            print(f"Exiting with status code {r.status_code} while scraping {subject}")
+            break
+
+@st.cache_data(ttl=86400)
+
+def displaydf():
+    df = pd.DataFrame(headlines)
+    df = df.drop_duplicates("Headline")
+    st.dataframe(df)
+
+    
+if __name__ == '__main__':
+    headlinescrape()
+    displaydf()
