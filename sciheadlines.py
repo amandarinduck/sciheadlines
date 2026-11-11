@@ -52,15 +52,16 @@ def headlinescrape():
         else:
             print(f"Exiting with status code {r.status_code} while scraping {subject}")
             break
-
-@st.cache_data(ttl=86400)
-
-def displaydf():
+    df=pd.DataFrame(headlines)
     df = pd.DataFrame(headlines)
-    df = df.drop_duplicates("Headline")
+    return df
+
+def displaydf(df):
     st.dataframe(df)
+
 
     
 if __name__ == '__main__':
-    headlinescrape()
-    displaydf()
+    df = headlinescrape()
+    displaydf(df)
+
